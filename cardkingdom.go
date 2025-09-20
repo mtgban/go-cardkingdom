@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
 )
@@ -27,6 +28,10 @@ type Response struct {
 type Metadata struct {
 	CreatedAt string `json:"created_at"`
 	BaseURL   string `json:"base_url"`
+}
+
+func (m Metadata) CreatedAtTime() (time.Time, error) {
+	return time.Parse("2006-01-02 15:04:05", m.CreatedAt)
 }
 
 type Product struct {
