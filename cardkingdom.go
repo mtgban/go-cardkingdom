@@ -99,7 +99,7 @@ func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product
 	}
 
 	var pricelist Response
-	err = json.NewDecoder(reader).Decode(&pricelist)
+	err := json.NewDecoder(reader).Decode(&pricelist)
 	if err != nil {
 		return nil, fmt.Errorf("decode %s: %w", link, err)
 	}
