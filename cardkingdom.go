@@ -20,11 +20,13 @@ const (
 )
 
 type Response struct {
-	Meta struct {
-		CreatedAt string `json:"created_at"`
-		BaseURL   string `json:"base_url"`
-	} `json:"meta"`
+	Meta Metadata  `json:"meta"`
 	Data []Product `json:"data"`
+}
+
+type Metadata struct {
+	CreatedAt string `json:"created_at"`
+	BaseURL   string `json:"base_url"`
 }
 
 type Product struct {
@@ -55,14 +57,16 @@ type ConditionValue struct {
 }
 
 func SinglesPricelist(ctx context.Context, client *http.Client) ([]Product, error) {
-	return Pricelist(ctx, client, PricelistURL)
+	products, _, err := Pricelist(ctx, client, PricelistURL)
+	return products, err
 }
 
 func SealedPricelist(ctx context.Context, client *http.Client) ([]Product, error) {
-	return Pricelist(ctx, client, SealedListURL)
+	products, _, err := Pricelist(ctx, client, SealedListURL)
+	return products, err
 }
 
-func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product, error) {
+func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product, Metadata, error) {
 	var reader io.Reader
 	if strings.HasPrefix(link, "http") {
 		if client == nil {
@@ -71,27 +75,27 @@ func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, http.NoBody)
 		if err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 		req.Header.Set("User-Agent", UserAgent)
 
 		resp, err := client.Do(req)
 		if err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			// Try reading something from the body
 			ret, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
-			return nil, fmt.Errorf("GET %s: %s: %s", link, resp.Status, string(ret))
+			return nil, Metadata{}, fmt.Errorf("GET %s: %s: %s", link, resp.Status, string(ret))
 		}
 
 		reader = resp.Body
 	} else {
 		file, err := os.Open(link)
 		if err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 		defer file.Close()
 
@@ -101,8 +105,8 @@ func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product
 	var pricelist Response
 	err := json.NewDecoder(reader).Decode(&pricelist)
 	if err != nil {
-		return nil, fmt.Errorf("decode %s: %w", link, err)
+		return nil, Metadata{}, fmt.Errorf("decode %s: %w", link, err)
 	}
 
-	return pricelist.Data, nil
+	return pricelist.Data, pricelist.Meta, nil
 }

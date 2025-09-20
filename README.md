@@ -52,7 +52,7 @@ Passing `nil` will default to a clean, connection-reusing client from `go-cleanh
 For testing or offline runs, you can point `Pricelist` at a local JSON file path:
 
 ```go
-prods, err := cardkingdom.Pricelist(ctx, nil, "./fixtures/singles.json")
+prods, metadata, err := cardkingdom.Pricelist(ctx, nil, "pricelist.json")
 ```
 
 If the `link` argument doesn’t start with `http`, the function opens it as a file.
