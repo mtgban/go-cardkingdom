@@ -22,7 +22,7 @@ import (
     "context"
     "fmt"
     "net/http"
-    ck "github.com/your/module/path/cardkingdom"
+    ck "github.com/mtgban/go-cardkingdom"
 )
 
 func main() {
@@ -57,7 +57,7 @@ prods, metadata, err := cardkingdom.Pricelist(ctx, nil, "pricelist.json")
 
 If the `link` argument doesn’t start with `http`, the function opens it as a file.
 
-It's possible to parse the metadata CreatedAt filed as a time.Time with the
+It's possible to parse the metadata CreatedAt field as a time.Time with the
 `CreatedAtTime()` method.
 
 ## Data model
