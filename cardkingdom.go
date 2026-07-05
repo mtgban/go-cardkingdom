@@ -150,10 +150,10 @@ func SealedPricelist(ctx context.Context, client *http.Client) ([]Product, error
 
 // Pricelist fetches and decodes a Card Kingdom price list from the given link.
 //
-// If link begins with "http", an HTTP GET request is made using the provided
-// client. Passing nil for client will use a default clean HTTP client from
-// [github.com/hashicorp/go-cleanhttp]. If link does not begin with "http", it
-// is treated as a local file path, which is useful for testing or processing
+// If link begins with "http://" or "https://", an HTTP GET request is made
+// using the provided client. Passing nil for client will use a default clean
+// HTTP client from [github.com/hashicorp/go-cleanhttp]. Otherwise link is
+// treated as a local file path, which is useful for testing or processing
 // cached snapshots.
 //
 // On a non-200 response, the error includes the status and up to 4 KB of the
@@ -161,7 +161,7 @@ func SealedPricelist(ctx context.Context, client *http.Client) ([]Product, error
 // easier diagnosis.
 func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product, Metadata, error) {
 	var reader io.Reader
-	if strings.HasPrefix(link, "http") {
+	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
 		if client == nil {
 			client = cleanhttp.DefaultClient()
 		}
