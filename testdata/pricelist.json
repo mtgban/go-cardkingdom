@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "created_at": "2025-09-21 14:30:00",
+    "base_url": "https://www.cardkingdom.com/"
+  },
+  "data": [
+    {
+      "id": 1234,
+      "sku": "ABC-123",
+      "scryfall_id": "0000ec9b-3d1a-4a0e-b8b8-0d2f0f0a1234",
+      "url": "https://www.cardkingdom.com/mtg/example/black-lotus",
+      "name": "Black Lotus",
+      "variation": "Borderless",
+      "edition": "Alpha",
+      "is_foil": "true",
+      "price_retail": "12345.67",
+      "qty_retail": 2,
+      "price_buy": "9000.00",
+      "qty_buying": 5,
+      "condition_values": {
+        "nm_price": "9000.00",
+        "nm_qty": 5,
+        "ex_price": "8000.50",
+        "ex_qty": 4,
+        "vg_price": "7000.25",
+        "vg_qty": 3,
+        "g_price": "6000.00",
+        "g_qty": 2
+      }
+    },
+    {
+      "id": 5678,
+      "sku": "XYZ-789",
+      "scryfall_id": "",
+      "url": "https://www.cardkingdom.com/mtg/example/booster-box",
+      "name": "Booster Box",
+      "variation": "",
+      "edition": "Some Set",
+      "is_foil": "false",
+      "price_retail": "129.99",
+      "qty_retail": 10,
+      "price_buy": "0.00",
+      "qty_buying": 0,
+      "condition_values": {
+        "nm_price": "0.00",
+        "nm_qty": 0,
+        "ex_price": "0.00",
+        "ex_qty": 0,
+        "vg_price": "0.00",
+        "vg_qty": 0,
+        "g_price": "0.00",
+        "g_qty": 0
+      }
+    }
+  ]
+}
