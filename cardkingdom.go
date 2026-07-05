@@ -32,6 +32,11 @@ const (
 
 	// UserAgent is the HTTP User-Agent header sent with every request.
 	UserAgent = "go-cardkingdom"
+
+	// DefaultTimeout is the request timeout applied to the default HTTP
+	// client used when a nil client is passed. It only affects the default
+	// client; a caller-supplied client is used as-is.
+	DefaultTimeout = 30 * time.Second
 )
 
 // Response is the top-level envelope returned by the Card Kingdom API.
@@ -152,9 +157,9 @@ func SealedPricelist(ctx context.Context, client *http.Client) ([]Product, error
 //
 // If link begins with "http://" or "https://", an HTTP GET request is made
 // using the provided client. Passing nil for client will use a default clean
-// HTTP client from [github.com/hashicorp/go-cleanhttp]. Otherwise link is
-// treated as a local file path, which is useful for testing or processing
-// cached snapshots.
+// HTTP client from [github.com/hashicorp/go-cleanhttp] with a [DefaultTimeout]
+// request timeout. Otherwise link is treated as a local file path, which is
+// useful for testing or processing cached snapshots.
 //
 // On a non-200 response, the error includes the status and up to 4 KB of the
 // response body. JSON decode errors are wrapped with the source link for
@@ -164,6 +169,7 @@ func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product
 	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
 		if client == nil {
 			client = cleanhttp.DefaultClient()
+			client.Timeout = DefaultTimeout
 		}
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, http.NoBody)
