@@ -71,8 +71,8 @@ type Product struct {
 	// ID is the Card Kingdom internal product identifier.
 	ID int `json:"id"`
 
-	// Sku is the stock-keeping unit code for this listing.
-	Sku string `json:"sku"`
+	// SKU is the stock-keeping unit code for this listing.
+	SKU string `json:"sku"`
 
 	// ScryfallID is the Scryfall UUID for this card, suitable for
 	// cross-referencing with the Scryfall API. Empty for sealed products.
@@ -114,20 +114,20 @@ type Product struct {
 // ConditionValue holds buylist prices and purchase quantities broken down by
 // card condition. Prices are in USD.
 type ConditionValue struct {
-	// NmPrice is the buy price for Near Mint copies.
-	NmPrice float64 `json:"nm_price,string"`
-	// NmQty is the number of Near Mint copies Card Kingdom will purchase.
-	NmQty int `json:"nm_qty"`
+	// NMPrice is the buy price for Near Mint copies.
+	NMPrice float64 `json:"nm_price,string"`
+	// NMQty is the number of Near Mint copies Card Kingdom will purchase.
+	NMQty int `json:"nm_qty"`
 
-	// ExPrice is the buy price for Excellent copies.
-	ExPrice float64 `json:"ex_price,string"`
-	// ExQty is the number of Excellent copies Card Kingdom will purchase.
-	ExQty int `json:"ex_qty"`
+	// EXPrice is the buy price for Excellent copies.
+	EXPrice float64 `json:"ex_price,string"`
+	// EXQty is the number of Excellent copies Card Kingdom will purchase.
+	EXQty int `json:"ex_qty"`
 
-	// VgPrice is the buy price for Very Good copies.
-	VgPrice float64 `json:"vg_price,string"`
-	// VgQty is the number of Very Good copies Card Kingdom will purchase.
-	VgQty int `json:"vg_qty"`
+	// VGPrice is the buy price for Very Good copies.
+	VGPrice float64 `json:"vg_price,string"`
+	// VGQty is the number of Very Good copies Card Kingdom will purchase.
+	VGQty int `json:"vg_qty"`
 
 	// GPrice is the buy price for Good (heavily played) copies.
 	GPrice float64 `json:"g_price,string"`

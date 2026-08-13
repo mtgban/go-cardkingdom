@@ -65,7 +65,7 @@ It's possible to parse the metadata CreatedAt field as a time.Time with the
 ```go
 type Product struct {
     ID          int
-    Sku         string
+    SKU         string
     ScryfallID  string
     URL         string
     Name        string
@@ -80,12 +80,12 @@ type Product struct {
 }
 
 type ConditionValue struct {
-    NmPrice float64
-    NmQty   int
-    ExPrice float64
-    ExQty   int
-    VgPrice float64
-    VgQty   int
+    NMPrice float64
+    NMQty   int
+    EXPrice float64
+    EXQty   int
+    VGPrice float64
+    VGQty   int
     GPrice  float64
     GQty    int
 }

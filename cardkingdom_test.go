@@ -43,8 +43,8 @@ func assertFixtureProducts(t *testing.T, products []Product) {
 	if lotus.QtyRetail != 2 {
 		t.Errorf("QtyRetail = %d, want 2", lotus.QtyRetail)
 	}
-	if lotus.ConditionValues.ExPrice != 8000.50 {
-		t.Errorf("ExPrice = %v, want 8000.50", lotus.ConditionValues.ExPrice)
+	if lotus.ConditionValues.EXPrice != 8000.50 {
+		t.Errorf("EXPrice = %v, want 8000.50", lotus.ConditionValues.EXPrice)
 	}
 	if lotus.ConditionValues.GQty != 2 {
 		t.Errorf("GQty = %d, want 2", lotus.ConditionValues.GQty)
