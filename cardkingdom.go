@@ -187,7 +187,7 @@ func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product
 		if resp.StatusCode != http.StatusOK {
 			// Try reading something from the body
 			ret, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
-			return nil, Metadata{}, fmt.Errorf("GET %s: %s: %s", link, resp.Status, string(ret))
+			return nil, Metadata{}, fmt.Errorf("GET %q: %s: %s", link, resp.Status, string(ret))
 		}
 
 		reader = resp.Body
@@ -204,7 +204,7 @@ func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product
 	var pricelist Response
 	err := json.NewDecoder(reader).Decode(&pricelist)
 	if err != nil {
-		return nil, Metadata{}, fmt.Errorf("decode %s: %w", link, err)
+		return nil, Metadata{}, fmt.Errorf("decode %q: %w", link, err)
 	}
 
 	return pricelist.Data, pricelist.Meta, nil
