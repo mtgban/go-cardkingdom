@@ -36,6 +36,12 @@ jobs:
           go run github.com/mgechev/revive@v1.13.0 \
             -set_exit_status -config .revive.toml ./...
 
+      # revive reads the syntax tree; staticcheck follows the values through
+      # it. Pinned, since a new release finding new things would fail a build
+      # that changed nothing.
+      - name: Staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck@2025.1.1 ./...
+
       - name: Build
         run: go build ./...
 
