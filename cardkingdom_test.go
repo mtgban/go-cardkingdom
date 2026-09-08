@@ -32,7 +32,7 @@ func assertFixtureProducts(t *testing.T, products []Product) {
 		t.Errorf("Name = %q, want %q", lotus.Name, "Black Lotus")
 	}
 	if !lotus.IsFoil {
-		t.Errorf("IsFoil = false, want true (parsed from string)")
+		t.Error("IsFoil = false, want true (parsed from string)")
 	}
 	if lotus.PriceRetail != 12345.67 {
 		t.Errorf("PriceRetail = %v, want 12345.67", lotus.PriceRetail)
@@ -52,7 +52,7 @@ func assertFixtureProducts(t *testing.T, products []Product) {
 
 	box := products[1]
 	if box.IsFoil {
-		t.Errorf("IsFoil = true, want false (parsed from string)")
+		t.Error("IsFoil = true, want false (parsed from string)")
 	}
 	if box.PriceBuy != 0 {
 		t.Errorf("PriceBuy = %v, want 0", box.PriceBuy)

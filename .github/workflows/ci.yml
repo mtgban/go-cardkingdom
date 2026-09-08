@@ -31,6 +31,11 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      - name: Lint
+        run: |
+          go run github.com/mgechev/revive@v1.13.0 \
+            -set_exit_status -config .revive.toml ./...
+
       - name: Build
         run: go build ./...
 
