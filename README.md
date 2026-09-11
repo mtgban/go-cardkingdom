@@ -97,7 +97,7 @@ This package uses the `json:",string"` tag to parse those into `float64`/`bool` 
 
 ## Context & cancellation
 
-All functions accept a `context.Context`. Pass deadlines or cancel to abort in-flight HTTP requests:
+HTTP functions accept a `context.Context`. Pass deadlines or cancel to abort in-flight HTTP requests:
 
 ```go
 ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -128,3 +128,11 @@ the source location, use `time.ParseInLocation` on `CreatedAt` instead.
 Prices use `float64` to mirror the existing API. Binary floating-point values
 are approximate; callers needing exact monetary arithmetic should convert at
 their application boundary with an explicit rounding policy.
+
+## Explicit sources
+
+Use `PricelistFromURL(ctx, client, url)` for HTTP(S),
+`PricelistFromFile(path)` for files, or `DecodePricelist(reader)` for an
+existing reader. Each returns products, metadata, and an error. The decoder
+does not close the reader; local file reads do not support cancellation.
+`Pricelist` remains available with its original URL-prefix dispatch behavior.
