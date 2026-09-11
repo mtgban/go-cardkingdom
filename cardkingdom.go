@@ -65,14 +65,20 @@ func (m Metadata) CreatedAtTime() (time.Time, error) {
 	return time.Parse("2006-01-02 15:04:05", m.CreatedAt)
 }
 
+// ProductID identifies a product in the Card Kingdom catalog. It does not validate IDs.
+type ProductID int
+
+// SKU is a Card Kingdom stock-keeping unit. It does not validate SKU syntax.
+type SKU string
+
 // Product represents a single purchasable item in the Card Kingdom catalog,
 // either a trading card or a sealed product.
 type Product struct {
 	// ID is the Card Kingdom internal product identifier.
-	ID int `json:"id"`
+	ID ProductID `json:"id"`
 
 	// SKU is the stock-keeping unit code for this listing.
-	SKU string `json:"sku"`
+	SKU SKU `json:"sku"`
 
 	// ScryfallID is the Scryfall UUID for this card, suitable for
 	// cross-referencing with the Scryfall API. Empty for sealed products.

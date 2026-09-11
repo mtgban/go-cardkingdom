@@ -64,8 +64,8 @@ It's possible to parse the metadata CreatedAt field as a time.Time with the
 
 ```go
 type Product struct {
-    ID          int
-    SKU         string
+    ID          ProductID
+    SKU         SKU
     ScryfallID  string
     URL         string
     Name        string
@@ -113,3 +113,12 @@ prods, err := cardkingdom.SinglesPricelist(ctx, nil)
 
 MIT
 
+
+## Identifier migration
+
+`Product.ID` and `Product.SKU` now use defined types `ProductID` and `SKU`.
+This is a source-breaking change; JSON remains a number and a string respectively.
+Literals such as `Product{ID: 123, SKU: "ABC-1"}` still compile. Convert at
+primitive boundaries with `int(product.ID)` and `string(product.SKU)`, and
+convert incoming variables with `ProductID(id)` or `SKU(sku)`. These types
+distinguish identifiers but do not validate their values.
