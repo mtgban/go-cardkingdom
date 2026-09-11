@@ -60,7 +60,8 @@ type Metadata struct {
 
 // CreatedAtTime parses the CreatedAt field into a [time.Time].
 // The expected layout is "2006-01-02 15:04:05". An error is returned if the
-// value does not match that format.
+// value does not match that format. The timezone-free value is interpreted
+// as UTC for compatibility; the feed does not identify its source timezone.
 func (m Metadata) CreatedAtTime() (time.Time, error) {
 	return time.Parse("2006-01-02 15:04:05", m.CreatedAt)
 }
@@ -78,7 +79,7 @@ type Product struct {
 	// cross-referencing with the Scryfall API. Empty for sealed products.
 	ScryfallID string `json:"scryfall_id"`
 
-	// URL is the direct link to this product's page on cardkingdom.com.
+	// URL is a product path relative to Metadata.BaseURL.
 	URL string `json:"url"`
 
 	// Name is the card or product name.
@@ -107,31 +108,31 @@ type Product struct {
 	// to purchase. A value of 0 means they are not currently buying.
 	QtyBuying int `json:"qty_buying"`
 
-	// ConditionValues holds per-condition buy prices and quantities.
+	// ConditionValues holds per-condition retail prices and stock quantities.
 	ConditionValues ConditionValue `json:"condition_values"`
 }
 
-// ConditionValue holds buylist prices and purchase quantities broken down by
+// ConditionValue holds retail prices and stock quantities broken down by
 // card condition. Prices are in USD.
 type ConditionValue struct {
-	// NMPrice is the buy price for Near Mint copies.
+	// NMPrice is the retail price for Near Mint copies.
 	NMPrice float64 `json:"nm_price,string"`
-	// NMQty is the number of Near Mint copies Card Kingdom will purchase.
+	// NMQty is the number of Near Mint copies in stock.
 	NMQty int `json:"nm_qty"`
 
-	// EXPrice is the buy price for Excellent copies.
+	// EXPrice is the retail price for Excellent copies.
 	EXPrice float64 `json:"ex_price,string"`
-	// EXQty is the number of Excellent copies Card Kingdom will purchase.
+	// EXQty is the number of Excellent copies in stock.
 	EXQty int `json:"ex_qty"`
 
-	// VGPrice is the buy price for Very Good copies.
+	// VGPrice is the retail price for Very Good copies.
 	VGPrice float64 `json:"vg_price,string"`
-	// VGQty is the number of Very Good copies Card Kingdom will purchase.
+	// VGQty is the number of Very Good copies in stock.
 	VGQty int `json:"vg_qty"`
 
-	// GPrice is the buy price for Good (heavily played) copies.
+	// GPrice is the retail price for Good (heavily played) copies.
 	GPrice float64 `json:"g_price,string"`
-	// GQty is the number of Good copies Card Kingdom will purchase.
+	// GQty is the number of Good copies in stock.
 	GQty int `json:"g_qty"`
 }
 

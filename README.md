@@ -21,16 +21,15 @@ package main
 import (
     "context"
     "fmt"
-    "net/http"
     ck "github.com/mtgban/go-cardkingdom"
 )
 
 func main() {
     ctx := context.Background()
 
-    singles, err := ck.SinglesPricelist(ctx, http.DefaultClient)
+    singles, err := ck.SinglesPricelist(ctx, nil)
     if err != nil {
-        // Handle err
+        panic(err)
     }
     fmt.Printf("found %d products\n", len(singles))
 }
@@ -45,7 +44,9 @@ client := &http.Client{ Timeout: 10 * time.Second }
 items, err := cardkingdom.SinglesPricelist(ctx, client)
 ```
 
-Passing `nil` will default to a clean, connection-reusing client from `go-cleanhttp`.
+Passing `nil` creates a fresh client from `go-cleanhttp` with a 30-second
+timeout. To reuse connections across calls, supply a shared `*http.Client`
+with your chosen timeout.
 
 ## Reading from a local file
 
@@ -113,3 +114,17 @@ prods, err := cardkingdom.SinglesPricelist(ctx, nil)
 
 MIT
 
+
+## Data semantics
+
+`Product.URL` is relative to `Metadata.BaseURL` (for example,
+`mtg/4th-edition/abomination`). Condition prices and quantities describe retail
+stock; the root `PriceBuy` and `QtyBuying` fields describe the buylist.
+
+`CreatedAt` contains no timezone. `CreatedAtTime()` interprets it as UTC for
+compatibility; this does not establish the feed's source timezone. If you know
+the source location, use `time.ParseInLocation` on `CreatedAt` instead.
+
+Prices use `float64` to mirror the existing API. Binary floating-point values
+are approximate; callers needing exact monetary arithmetic should convert at
+their application boundary with an explicit rounding policy.
