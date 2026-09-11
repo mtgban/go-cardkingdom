@@ -113,3 +113,11 @@ prods, err := cardkingdom.SinglesPricelist(ctx, nil)
 
 MIT
 
+
+## Condition lookup
+
+Use `Conditions()` and `product.ConditionValues.Lookup(condition)` to retrieve
+price and quantity together without aligning separate slices. `Lookup` returns
+`(price, quantity, ok)`; unknown grades return `ok == false`, while known grades
+with zero values return `true`. Each `Conditions()` call returns an independent
+array ordered NM, EX, VG, G. The existing JSON fields remain available.
