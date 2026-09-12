@@ -2,7 +2,7 @@
 //
 // It supports fetching both singles and sealed-product price lists, decoding
 // them into typed Go structs. Requests are made over HTTP using a standard
-// [net/http.Client], and all functions accept a [context.Context] for
+// [net/http.Client], and HTTP functions accept a [context.Context] for
 // cancellation and deadline control.
 //
 // The two main entry points are [SinglesPricelist] and [SealedPricelist].
@@ -141,7 +141,7 @@ type ConditionValue struct {
 // It is a convenience wrapper around [Pricelist] that discards the [Metadata].
 // Passing nil for client will use a default clean HTTP client.
 func SinglesPricelist(ctx context.Context, client *http.Client) ([]Product, error) {
-	products, _, err := Pricelist(ctx, client, PricelistURL)
+	products, _, err := PricelistFromURL(ctx, client, PricelistURL)
 	return products, err
 }
 
@@ -150,7 +150,7 @@ func SinglesPricelist(ctx context.Context, client *http.Client) ([]Product, erro
 // It is a convenience wrapper around [Pricelist] that discards the [Metadata].
 // Passing nil for client will use a default clean HTTP client.
 func SealedPricelist(ctx context.Context, client *http.Client) ([]Product, error) {
-	products, _, err := Pricelist(ctx, client, SealedListURL)
+	products, _, err := PricelistFromURL(ctx, client, SealedListURL)
 	return products, err
 }
 
@@ -166,47 +166,64 @@ func SealedPricelist(ctx context.Context, client *http.Client) ([]Product, error
 // response body. JSON decode errors are wrapped with the source link for
 // easier diagnosis.
 func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product, Metadata, error) {
-	var reader io.Reader
 	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
-		if client == nil {
-			client = cleanhttp.DefaultClient()
-			client.Timeout = DefaultTimeout
-		}
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, http.NoBody)
-		if err != nil {
-			return nil, Metadata{}, err
-		}
-		req.Header.Set("User-Agent", UserAgent)
-
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, Metadata{}, err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			// Try reading something from the body
-			ret, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
-			return nil, Metadata{}, fmt.Errorf("GET %q: %s: %s", link, resp.Status, string(ret))
-		}
-
-		reader = resp.Body
-	} else {
-		file, err := os.Open(link)
-		if err != nil {
-			return nil, Metadata{}, err
-		}
-		defer file.Close()
-
-		reader = file
+		return PricelistFromURL(ctx, client, link)
 	}
+	return PricelistFromFile(link)
+}
 
-	var pricelist Response
-	err := json.NewDecoder(reader).Decode(&pricelist)
+// PricelistFromURL fetches an HTTP or HTTPS price list. A nil client uses
+// DefaultTimeout. The context controls the request, including body reads.
+func PricelistFromURL(ctx context.Context, client *http.Client, link string) ([]Product, Metadata, error) {
+	if client == nil {
+		client = cleanhttp.DefaultClient()
+		client.Timeout = DefaultTimeout
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, http.NoBody)
 	if err != nil {
-		return nil, Metadata{}, fmt.Errorf("decode %q: %w", link, err)
+		return nil, Metadata{}, err
 	}
+	if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
+		return nil, Metadata{}, fmt.Errorf("unsupported price list URL %q", link)
+	}
+	req.Header.Set("User-Agent", UserAgent)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, Metadata{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		ret, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
+		return nil, Metadata{}, fmt.Errorf("GET %q: %s: %s", link, resp.Status, string(ret))
+	}
+	return decodeSource(resp.Body, link)
+}
 
-	return pricelist.Data, pricelist.Meta, nil
+// PricelistFromFile reads a local JSON file regardless of its name.
+// It closes the file before returning. Local reads do not support cancellation.
+func PricelistFromFile(path string) ([]Product, Metadata, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, Metadata{}, err
+	}
+	defer file.Close()
+	return decodeSource(file, path)
+}
+
+// DecodePricelist decodes one JSON price list from reader without closing it.
+// Cancellation and reader lifetime are controlled by the caller.
+func DecodePricelist(reader io.Reader) ([]Product, Metadata, error) {
+	var response Response
+	if err := json.NewDecoder(reader).Decode(&response); err != nil {
+		return nil, Metadata{}, err
+	}
+	return response.Data, response.Meta, nil
+}
+
+func decodeSource(reader io.Reader, source string) ([]Product, Metadata, error) {
+	products, metadata, err := DecodePricelist(reader)
+	if err != nil {
+		return nil, Metadata{}, fmt.Errorf("decode %q: %w", source, err)
+	}
+	return products, metadata, nil
 }
