@@ -49,6 +49,9 @@ func assertFixtureProducts(t *testing.T, products []Product) {
 	if lotus.ConditionValues.GQty != 2 {
 		t.Errorf("GQty = %d, want 2", lotus.ConditionValues.GQty)
 	}
+	if lotus.ShipsInternationally {
+		t.Error("ShipsInternationally = true, want false (absent from singles)")
+	}
 
 	box := products[1]
 	if box.IsFoil {
@@ -59,6 +62,9 @@ func assertFixtureProducts(t *testing.T, products []Product) {
 	}
 	if box.ScryfallID != "" {
 		t.Errorf("ScryfallID = %q, want empty", box.ScryfallID)
+	}
+	if !box.ShipsInternationally {
+		t.Error("ShipsInternationally = false, want true (parsed from bool)")
 	}
 }
 
@@ -95,6 +101,16 @@ func TestPricelistFromFileMissing(t *testing.T) {
 	_, _, err := Pricelist(context.Background(), nil, "testdata/does-not-exist.json")
 	if err == nil {
 		t.Fatal("Pricelist: expected error for missing file, got nil")
+	}
+}
+
+func TestPricelistFileContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel before the read is attempted
+
+	_, _, err := Pricelist(ctx, nil, fixturePath)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("Pricelist error = %v, want context.Canceled", err)
 	}
 }
 

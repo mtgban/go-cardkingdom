@@ -110,6 +110,11 @@ type Product struct {
 
 	// ConditionValues holds per-condition retail prices and stock quantities.
 	ConditionValues ConditionValue `json:"condition_values"`
+
+	// ShipsInternationally reports whether Card Kingdom ships this item
+	// outside the United States. Only meaningful for sealed product; always
+	// false (and absent from the feed) for singles.
+	ShipsInternationally bool `json:"ships_internationally"`
 }
 
 // ConditionValue holds retail prices and stock quantities broken down by
@@ -160,7 +165,9 @@ func SealedPricelist(ctx context.Context, client *http.Client) ([]Product, error
 // using the provided client. Passing nil for client will use a default clean
 // HTTP client from [github.com/hashicorp/go-cleanhttp] with a [DefaultTimeout]
 // request timeout. Otherwise link is treated as a local file path, which is
-// useful for testing or processing cached snapshots.
+// useful for testing or processing cached snapshots. In that case ctx is
+// only checked before the read starts — [PricelistFromFile], which handles
+// the read itself, does not observe ctx once opened.
 //
 // On a non-200 response, the error includes the status and up to 4 KB of the
 // response body. JSON decode errors are wrapped with the source link for
@@ -168,6 +175,9 @@ func SealedPricelist(ctx context.Context, client *http.Client) ([]Product, error
 func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product, Metadata, error) {
 	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
 		return PricelistFromURL(ctx, client, link)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, Metadata{}, err
 	}
 	return PricelistFromFile(link)
 }
