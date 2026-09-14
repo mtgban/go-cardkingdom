@@ -50,7 +50,8 @@
         "vg_qty": 0,
         "g_price": "0.00",
         "g_qty": 0
-      }
+      },
+      "ships_internationally": true
     }
   ]
 }

@@ -78,6 +78,7 @@ type Product struct {
     PriceBuy    float64
     QtyBuying   int
     ConditionValues ConditionValue
+    ShipsInternationally bool
 }
 
 type ConditionValue struct {
@@ -121,6 +122,13 @@ MIT
 `mtg/4th-edition/abomination`). Condition prices and quantities describe retail
 stock; the root `PriceBuy` and `QtyBuying` fields describe the buylist.
 
+Singles and sealed product are structurally disjoint records decoded into
+the same `Product` struct: `SKU`, `ScryfallID`, `Variation`, `IsFoil`, and
+`ConditionValues` are singles-only (always zero/empty on sealed product),
+while `ShipsInternationally` is sealed-only (always `false` on singles).
+Nothing in the feed itself flags which shape a record is — that's implied
+by which endpoint you fetched it from.
+
 `CreatedAt` contains no timezone. `CreatedAtTime()` interprets it as UTC for
 compatibility; this does not establish the feed's source timezone. If you know
 the source location, use `time.ParseInLocation` on `CreatedAt` instead.
@@ -134,5 +142,8 @@ their application boundary with an explicit rounding policy.
 Use `PricelistFromURL(ctx, client, url)` for HTTP(S),
 `PricelistFromFile(path)` for files, or `DecodePricelist(reader)` for an
 existing reader. Each returns products, metadata, and an error. The decoder
-does not close the reader; local file reads do not support cancellation.
-`Pricelist` remains available with its original URL-prefix dispatch behavior.
+does not close the reader; `PricelistFromFile` itself does not support
+cancellation once the read has started. `Pricelist` remains available with
+its original URL-prefix dispatch behavior, and checks `ctx` before starting
+a local-file read (so an already-cancelled or expired context is honored
+up front, even though the read itself can't be interrupted mid-flight).
