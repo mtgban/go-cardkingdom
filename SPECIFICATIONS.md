@@ -22,7 +22,7 @@ the exhaustive union of JSON keys present, at every level, not a sample.
 
 ### Field presence by endpoint
 
-| JSON key | Singles | Sealed | Decoded by `Product` today |
+| JSON key | Singles | Sealed | Decoded by `Product` |
 |---|---|---|---|
 | `id` | always | always | yes (`ID`) |
 | `sku` | always | **never** | yes (`SKU`) |
@@ -114,9 +114,10 @@ for which.
 
 Per-condition **retail** breakdown for a singles row, not buylist data:
 `go-mtgban` names its use of these fields `retailPrices`/`qtys` and feeds
-them into inventory (for-sale) records, never buylist records. There is no vendor-provided per-condition
-*buylist* breakdown in either feed — a consumer wanting buylist prices by
-condition has to derive them (see below).
+them into inventory (for-sale) records, never buylist records. There is no
+vendor-provided per-condition *buylist* breakdown in either feed — a
+consumer wanting buylist prices by condition has to derive them (see
+below).
 
 - `NMPrice`/`NMQty`, `EXPrice`/`EXQty`, `VGPrice`/`VGQty`, `GPrice`/`GQty`:
   retail price and in-stock quantity for Near Mint, Excellent, Very Good,
@@ -137,16 +138,6 @@ native JSON numbers. `ships_internationally` (`ShipsInternationally`,
 sealed-only) is also a native JSON boolean — the vendor is not consistent
 about which representation it uses per field.
 
-## Versioning history
-
-| Tag | Notes |
-|---|---|
-| `v0.0.1` | **Retracted** — contains a compilation error. |
-| `v0.0.2` | — |
-| `v0.0.3` | Hardening pass: default HTTP client timeout, explicit `http://`/`https://` scheme check (was a bare `"http"` prefix), test suite added, CI added, `v0.0.1` retraction added. |
-| `v0.1.0` | **Breaking**: exported field initialisms cased per the Go style guide (`Sku`→`SKU`, `Nm`/`Ex`/`Vg`→`NM`/`EX`/`VG`). |
-| (unreleased, on `master`) | `PR #4`: corrected `ConditionValue`/`URL` doc comments from buylist to retail semantics, documented the `CreatedAt` timezone assumption. `PR #3`: added explicit `PricelistFromURL`/`PricelistFromFile`/`DecodePricelist` alongside the prefix-sniffing `Pricelist` (see API surface, below). `PR #5`: added `Product.ShipsInternationally`; `Pricelist` now checks `ctx.Err()` before a local-file read. Error strings quote the source link with `%q`. `go.mod` requires Go 1.26. **Breaking**: `Pricelist` returns `([]Product, error)`; the envelope comes from the new `SinglesPricelistFile`/`SealedPricelistFile`/`LoadPricelistFile` as a `PricelistFile` (formerly `Response`). `PricelistFromURL`, `PricelistFromFile` and `DecodePricelist` are removed. |
-
 ## API surface
 
 Each entry point comes in two forms, as in `go-cardmarket`: one returns the
@@ -165,8 +156,8 @@ products, its `…File` counterpart the whole `PricelistFile`.
 ## Downstream consumer: `go-mtgban`
 
 `github.com/mtgban/go-mtgban`'s `cardkingdom/` package is a real, live
-consumer (pinned at `v0.1.0` as of this writing) and the best available
-ground truth for how these fields are actually used:
+consumer and the best available ground truth for how these fields are
+actually used:
 
 - Builds retail inventory entries from `ConditionValues`, indexed
   positionally against `mtgban.DefaultGradeTags` — `NMPrice`/`EXPrice`/
@@ -219,5 +210,5 @@ The fixtures are real records copied unchanged from both live feeds
   internationally and one that does not; none of the singles-only keys.
 
 `cardkingdom_test.go` compares every decoded `Product` field for field. The
-`SinglesPricelist`/`SealedPricelist` tests serve each endpoint its own
-fixture through a fake `http.RoundTripper`.
+tests for the fixed endpoints, plain and `…File`, serve each endpoint its
+own fixture through a fake `http.RoundTripper`.
