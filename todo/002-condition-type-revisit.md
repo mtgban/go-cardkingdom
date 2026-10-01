@@ -41,14 +41,14 @@ to the wrong condition; nothing in the type system catches it. This is
 documented in more detail in `SPECIFICATIONS.md`'s downstream-consumer
 section.
 
-## Why this is a different case from `006`
+## Why this is a different case from `003`
 
-Unlike the `ProductID`/`SKU` proposal (`006`, also closed), this one targets
+Unlike the `ProductID`/`SKU` proposal (`003`, also closed), this one targets
 a concretely identified failure mode at the actual point of use, not a
 speculative one. A `Lookup`/`Price`/`Qty`-style accessor keyed by `Condition`
 would let the consumer iterate `Conditions()` once instead of hand-aligning
 three sequences — removing the index-alignment risk at its source rather
-than adding a cast at a boundary that doesn't guard it (contrast with `006`).
+than adding a cast at a boundary that doesn't guard it (contrast with `003`).
 
 ## Recommendation
 
