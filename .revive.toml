@@ -40,3 +40,5 @@ warningCode = 1
 [rule.unreachable-code]
 [rule.var-declaration]
 [rule.var-naming]
+[rule.imports-blocklist]
+  arguments = ["reflect"]

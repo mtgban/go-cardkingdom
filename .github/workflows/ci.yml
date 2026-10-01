@@ -21,9 +21,9 @@ jobs:
 
       - name: Verify formatting
         run: |
-          unformatted=$(gofmt -l .)
+          unformatted=$(gofmt -s -l .)
           if [ -n "$unformatted" ]; then
-            echo "The following files are not gofmt-clean:"
+            echo "these files are not gofmt-ed:"
             echo "$unformatted"
             exit 1
           fi
@@ -33,17 +33,21 @@ jobs:
 
       - name: Lint
         run: |
-          go run github.com/mgechev/revive@v1.17.0 \
+          go run github.com/mgechev/revive@v1.13.0 \
             -set_exit_status -config .revive.toml ./...
 
       # revive reads the syntax tree; staticcheck follows the values through
       # it. Pinned, since a new release finding new things would fail a build
       # that changed nothing.
       - name: Staticcheck
-        run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
+        run: go run honnef.co/go/tools/cmd/staticcheck@2026.2.1 ./...
+
+      # Not pinned: the verdict follows the vulnerability database.
+      - name: Govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
       - name: Build
         run: go build ./...
 
       - name: Test
-        run: go test -race -coverprofile=coverage.out ./...
+        run: go test -race ./...
