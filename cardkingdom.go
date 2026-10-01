@@ -144,7 +144,8 @@ type ConditionValue struct {
 
 // SinglesPricelist fetches the current singles price list from Card Kingdom.
 //
-// It is a convenience wrapper around [Pricelist] that discards the [Metadata].
+// It is a convenience wrapper around [PricelistFromURL] that discards the
+// [Metadata].
 // Passing nil for client will use a default clean HTTP client.
 func SinglesPricelist(ctx context.Context, client *http.Client) ([]Product, error) {
 	products, _, err := PricelistFromURL(ctx, client, PricelistURL)
@@ -153,7 +154,8 @@ func SinglesPricelist(ctx context.Context, client *http.Client) ([]Product, erro
 
 // SealedPricelist fetches the current sealed-product price list from Card Kingdom.
 //
-// It is a convenience wrapper around [Pricelist] that discards the [Metadata].
+// It is a convenience wrapper around [PricelistFromURL] that discards the
+// [Metadata].
 // Passing nil for client will use a default clean HTTP client.
 func SealedPricelist(ctx context.Context, client *http.Client) ([]Product, error) {
 	products, _, err := PricelistFromURL(ctx, client, SealedListURL)

@@ -112,12 +112,9 @@ for which.
 
 ### `ConditionValue`
 
-Per-condition **retail** breakdown for a singles row — despite the field
-names originally documented as buylist data, this was corrected in
-[PR #4](https://github.com/mtgban/go-cardkingdom/pull/4) (merged) after
-checking a real consumer: `go-mtgban` explicitly names its use of these
-fields `retailPrices`/`qtys` and feeds them into inventory (for-sale)
-records, never buylist records. There is no vendor-provided per-condition
+Per-condition **retail** breakdown for a singles row, not buylist data:
+`go-mtgban` names its use of these fields `retailPrices`/`qtys` and feeds
+them into inventory (for-sale) records, never buylist records. There is no vendor-provided per-condition
 *buylist* breakdown in either feed — a consumer wanting buylist prices by
 condition has to derive them (see below).
 
@@ -158,7 +155,7 @@ about which representation it uses per field.
   fresh `go-cleanhttp` client with `DefaultTimeout` (30s).
 - `Pricelist(ctx, client, link)`: dispatches on `link`'s prefix — a
   `http://`/`https://` URL goes to `PricelistFromURL`; anything else goes to
-  `PricelistFromFile`, after a `ctx.Err()` check (added in `PR #5`) so an
+  `PricelistFromFile`, after a `ctx.Err()` check so an
   already-cancelled/expired context is honored before the read starts. Kept
   for compatibility; prefer the explicit functions below in new code.
 - `PricelistFromURL(ctx, client, url)`: HTTP(S) only — rejects any other
