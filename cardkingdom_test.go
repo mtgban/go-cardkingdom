@@ -109,19 +109,25 @@ func assertProducts(t *testing.T, got, want []Product) {
 	}
 }
 
-func TestPricelistFromFile(t *testing.T) {
-	products, meta, err := Pricelist(context.Background(), nil, singlesFixture)
+func TestPricelistLocalFile(t *testing.T) {
+	products, err := Pricelist(context.Background(), nil, singlesFixture)
 	if err != nil {
 		t.Fatalf("Pricelist: %v", err)
 	}
-
 	assertProducts(t, products, wantSingles)
+}
 
-	if meta.BaseURL != "https://www.cardkingdom.com/" {
-		t.Errorf("BaseURL = %q, want %q", meta.BaseURL, "https://www.cardkingdom.com/")
+func TestLoadPricelistFile(t *testing.T) {
+	file, err := LoadPricelistFile(context.Background(), nil, singlesFixture)
+	if err != nil {
+		t.Fatalf("LoadPricelistFile: %v", err)
 	}
+	assertProducts(t, file.Data, wantSingles)
 
-	got, err := meta.CreatedAtTime()
+	if file.Meta.BaseURL != "https://www.cardkingdom.com/" {
+		t.Errorf("BaseURL = %q, want %q", file.Meta.BaseURL, "https://www.cardkingdom.com/")
+	}
+	got, err := file.Meta.CreatedAtTime()
 	if err != nil {
 		t.Fatalf("CreatedAtTime: %v", err)
 	}
@@ -132,16 +138,28 @@ func TestPricelistFromFile(t *testing.T) {
 }
 
 func TestCreatedAtTimeInvalid(t *testing.T) {
-	m := Metadata{CreatedAt: "not-a-date"}
+	m := Metadata{CreatedAt: "2026-10-01T04:04:53Z"}
 	if _, err := m.CreatedAtTime(); err == nil {
 		t.Fatal("CreatedAtTime: expected error for malformed timestamp, got nil")
 	}
 }
 
-func TestPricelistFromFileMissing(t *testing.T) {
-	_, _, err := Pricelist(context.Background(), nil, "testdata/does-not-exist.json")
-	if err == nil {
-		t.Fatal("Pricelist: expected error for missing file, got nil")
+func TestPricelistLocalFileMissing(t *testing.T) {
+	_, err := Pricelist(context.Background(), nil, "testdata/does-not-exist.json")
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Pricelist error = %v, want ErrNotExist", err)
+	}
+	_, err = LoadPricelistFile(context.Background(), nil, "testdata/does-not-exist.json")
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("LoadPricelistFile error = %v, want ErrNotExist", err)
+	}
+}
+
+// A malformed URL fails building the request, before the default client
+// (nil client) would reach the network.
+func TestPricelistBadURL(t *testing.T) {
+	if _, err := Pricelist(context.Background(), nil, "http://bad host/"); err == nil {
+		t.Fatal("Pricelist: expected error for malformed URL, got nil")
 	}
 }
 
@@ -149,7 +167,7 @@ func TestPricelistFileContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel before the read is attempted
 
-	_, _, err := Pricelist(ctx, nil, singlesFixture)
+	_, err := Pricelist(ctx, nil, singlesFixture)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("Pricelist error = %v, want context.Canceled", err)
 	}
@@ -168,7 +186,7 @@ func TestPricelistHTTP(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	products, _, err := Pricelist(context.Background(), srv.Client(), srv.URL)
+	products, err := Pricelist(context.Background(), srv.Client(), srv.URL)
 	if err != nil {
 		t.Fatalf("Pricelist: %v", err)
 	}
@@ -185,7 +203,7 @@ func TestPricelistHTTPNon200(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, _, err := Pricelist(context.Background(), srv.Client(), srv.URL)
+	_, err := Pricelist(context.Background(), srv.Client(), srv.URL)
 	if err == nil {
 		t.Fatal("Pricelist: expected error for non-200 response, got nil")
 	}
@@ -204,7 +222,7 @@ func TestPricelistHTTPBadJSON(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, _, err := Pricelist(context.Background(), srv.Client(), srv.URL)
+	_, err := Pricelist(context.Background(), srv.Client(), srv.URL)
 	if err == nil {
 		t.Fatal("Pricelist: expected decode error, got nil")
 	}
@@ -222,7 +240,7 @@ func TestPricelistContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel before the request is made
 
-	_, _, err := Pricelist(ctx, srv.Client(), srv.URL)
+	_, err := Pricelist(ctx, srv.Client(), srv.URL)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("Pricelist error = %v, want context.Canceled", err)
 	}
@@ -248,14 +266,15 @@ func (ft *fixtureTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 func TestSinglesAndSealedURLs(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		call    func(ctx context.Context, c *http.Client) ([]Product, error)
-		fixture string
-		want    []Product
-		wantURL string
+		name     string
+		call     func(ctx context.Context, c *http.Client) ([]Product, error)
+		fileCall func(ctx context.Context, c *http.Client) (*PricelistFile, error)
+		fixture  string
+		want     []Product
+		wantURL  string
 	}{
-		{"singles", SinglesPricelist, singlesFixture, wantSingles, PricelistURL},
-		{"sealed", SealedPricelist, sealedFixture, wantSealed, SealedListURL},
+		{"singles", SinglesPricelist, SinglesPricelistFile, singlesFixture, wantSingles, PricelistURL},
+		{"sealed", SealedPricelist, SealedPricelistFile, sealedFixture, wantSealed, SealedListURL},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			body, err := os.ReadFile(tc.fixture)
@@ -273,6 +292,19 @@ func TestSinglesAndSealedURLs(t *testing.T) {
 
 			if ft.lastURL != tc.wantURL {
 				t.Errorf("requested URL = %q, want %q", ft.lastURL, tc.wantURL)
+			}
+
+			ft.lastURL = ""
+			file, err := tc.fileCall(context.Background(), client)
+			if err != nil {
+				t.Fatalf("%s file: %v", tc.name, err)
+			}
+			assertProducts(t, file.Data, tc.want)
+			if file.Meta.CreatedAt == "" {
+				t.Error("Meta.CreatedAt is empty")
+			}
+			if ft.lastURL != tc.wantURL {
+				t.Errorf("file requested URL = %q, want %q", ft.lastURL, tc.wantURL)
 			}
 		})
 	}

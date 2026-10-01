@@ -13,7 +13,7 @@ this is the source of truth for what the vendor actually sends.
 | `PricelistURL` | `https://api.cardkingdom.com/api/v2/pricelist` | Singles (individual cards) | 152,175 |
 | `SealedListURL` | `https://api.cardkingdom.com/api/sealed_pricelist` | Sealed product | 2,128 |
 
-Both return the same envelope shape (`Response`: `meta` + `data`), decoded
+Both return the same envelope shape (`meta` + `data`), decoded
 by the same `Product` struct for every record — but the two endpoints send
 **structurally disjoint** sets of fields per record. This was confirmed by
 fetching every record from both live endpoints on 2026-10-01 and computing
@@ -53,23 +53,23 @@ anything in the `Product` value itself.
 
 ## Types
 
-### `Response`
+### `PricelistFile`
 
-The top-level envelope: `{"meta": Metadata, "data": []Product}`. Most
-callers use `SinglesPricelist`, `SealedPricelist`, or `Pricelist` instead of
-decoding this directly.
+The envelope `{"meta": Metadata, "data": []Product}`, decoded as sent and
+returned by `SinglesPricelistFile`, `SealedPricelistFile` and
+`LoadPricelistFile`.
 
 ### `Metadata`
 
 - `CreatedAt` (`created_at`): a timestamp with **no timezone indicator**,
-  formatted `"2006-01-02 15:04:05"`. `CreatedAtTime()` parses it as UTC for
-  a deterministic, comparable value — this is a compatibility choice, not a
-  claim about the feed's actual source timezone, which is unknown. If the
-  true source timezone is ever confirmed, parse `CreatedAt` directly with
-  `time.ParseInLocation` instead of using `CreatedAtTime()`.
+  formatted `"2006-01-02 15:04:05"`, kept as the string sent.
+  `CreatedAtTime()` parses it as UTC for a deterministic, comparable value —
+  not a claim about the feed's actual source timezone, which is unknown. If
+  the true source timezone is ever confirmed, parse `CreatedAt` with
+  `time.ParseInLocation` instead.
 - `BaseURL` (`base_url`): observed as `"https://www.cardkingdom.com/"` on
   both endpoints. `Product.URL` is a path relative to this, not an absolute
-  URL (see below) — despite the field's name.
+  URL (see below).
 
 ### `Product`
 
@@ -143,35 +143,24 @@ about which representation it uses per field.
 |---|---|
 | `v0.0.1` | **Retracted** — contains a compilation error. |
 | `v0.0.2` | — |
-| `v0.0.3` | Hardening pass: default HTTP client timeout, explicit `http://`/`https://` scheme check (was a bare `"http"` prefix), test suite added, CI added, `%q`-quoted error strings, `v0.0.1` retraction added. |
+| `v0.0.3` | Hardening pass: default HTTP client timeout, explicit `http://`/`https://` scheme check (was a bare `"http"` prefix), test suite added, CI added, `v0.0.1` retraction added. |
 | `v0.1.0` | **Breaking**: exported field initialisms cased per the Go style guide (`Sku`→`SKU`, `Nm`/`Ex`/`Vg`→`NM`/`EX`/`VG`). |
-| (unreleased, on `master`) | `PR #4`: corrected `ConditionValue`/`URL` doc comments from buylist to retail semantics, documented the `CreatedAt` timezone assumption. `PR #3`: added explicit `PricelistFromURL`/`PricelistFromFile`/`DecodePricelist` alongside the prefix-sniffing `Pricelist` (see API surface, below). `PR #5`: added `Product.ShipsInternationally`; `Pricelist` now checks `ctx.Err()` before a local-file read. |
+| (unreleased, on `master`) | `PR #4`: corrected `ConditionValue`/`URL` doc comments from buylist to retail semantics, documented the `CreatedAt` timezone assumption. `PR #3`: added explicit `PricelistFromURL`/`PricelistFromFile`/`DecodePricelist` alongside the prefix-sniffing `Pricelist` (see API surface, below). `PR #5`: added `Product.ShipsInternationally`; `Pricelist` now checks `ctx.Err()` before a local-file read. Error strings quote the source link with `%q`. `go.mod` requires Go 1.26. **Breaking**: `Pricelist` returns `([]Product, error)`; the envelope comes from the new `SinglesPricelistFile`/`SealedPricelistFile`/`LoadPricelistFile` as a `PricelistFile` (formerly `Response`). `PricelistFromURL`, `PricelistFromFile` and `DecodePricelist` are removed. |
 
 ## API surface
 
-- `SinglesPricelist(ctx, client)` / `SealedPricelist(ctx, client)`: the two
-  main entry points, thin wrappers around `PricelistFromURL` against the
-  fixed `PricelistURL`/`SealedListURL` constants. A `nil` client gets a
-  fresh `go-cleanhttp` client with `DefaultTimeout` (30s).
-- `Pricelist(ctx, client, link)`: dispatches on `link`'s prefix — a
-  `http://`/`https://` URL goes to `PricelistFromURL`; anything else goes to
-  `PricelistFromFile`, after a `ctx.Err()` check so an
-  already-cancelled/expired context is honored before the read starts. Kept
-  for compatibility; prefer the explicit functions below in new code.
-- `PricelistFromURL(ctx, client, url)`: HTTP(S) only — rejects any other
-  scheme. `ctx` governs the request and body read throughout. Non-200
-  responses return an error with the status and up to 4KB of body; decode
-  errors are wrapped with the source URL via `%w`.
-- `PricelistFromFile(path)`: opens and reads a local file, closes it before
-  returning. Takes no `ctx` and does not support cancellation once the read
-  has started — this is a deliberate, documented design choice, not an
-  oversight (contrast with `Pricelist`'s upfront check, above).
-- `DecodePricelist(reader)`: the lowest-level primitive — decodes one JSON
-  price list from an already-open `io.Reader` without closing it or
-  observing any cancellation; both are entirely the caller's
-  responsibility.
-- `Metadata.CreatedAtTime()`: parses `CreatedAt` assuming UTC (see Known
-  limitations, below).
+Each entry point comes in two forms, as in `go-cardmarket`: one returns the
+products, its `…File` counterpart the whole `PricelistFile`.
+
+- `SinglesPricelist(ctx, client)` / `SealedPricelist(ctx, client)` and
+  `SinglesPricelistFile` / `SealedPricelistFile`: fetch the fixed
+  `PricelistURL` / `SealedListURL`. A `nil` client gets a fresh
+  `go-cleanhttp` client with `DefaultTimeout` (30s).
+- `Pricelist(ctx, client, link)` / `LoadPricelistFile(ctx, client, link)`:
+  a `http://`/`https://` link is fetched, with `ctx` governing the request
+  and body read; anything else is read as a local file, after a `ctx.Err()`
+  check. Non-200 responses return an error with the status and up to 4KB of
+  body; decode errors are wrapped with the source link via `%w`.
 
 ## Downstream consumer: `go-mtgban`
 
@@ -214,10 +203,9 @@ ground truth for how these fields are actually used:
 - **One struct, two schemas**: `Product` decodes both feeds by field
   presence/absence rather than by an explicit discriminator (see the
   field-presence table above).
-- **`PricelistFromFile` has no cancellation once reading starts**: `Pricelist`
-  checks `ctx` before delegating to it, but the read itself can't be
-  interrupted mid-flight — this is a deliberate scope decision (local file
-  reads are fast and finite), not a gap.
+- **Local files have no cancellation once reading starts**: `Pricelist` and
+  `LoadPricelistFile` check `ctx` before opening a file, but the read itself
+  can't be interrupted mid-flight — local file reads are fast and finite.
 
 ## Testing
 
