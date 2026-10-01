@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "created_at": "2026-10-01 04:05:00",
+    "base_url": "https://www.cardkingdom.com/"
+  },
+  "data": [
+    {
+      "id": 1132,
+      "url": "mtg-sealed/mercadian-masques-booster-box",
+      "name": "Mercadian Masques Booster Box",
+      "edition": "Mercadian Masques",
+      "ships_internationally": true,
+      "price_retail": "2699.99",
+      "qty_retail": 1,
+      "price_buy": "1755.00",
+      "qty_buying": 1
+    },
+    {
+      "id": 230638,
+      "url": "mtg-sealed/secret-lair-drop-bitterblossom-dreams",
+      "name": "Secret Lair Drop - Bitterblossom Dreams",
+      "edition": "Secret Lair",
+      "ships_internationally": false,
+      "price_retail": "74.99",
+      "qty_retail": 0,
+      "price_buy": "33.00",
+      "qty_buying": 9
+    }
+  ]
+}

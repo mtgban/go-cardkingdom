@@ -13,68 +13,109 @@ import (
 	"time"
 )
 
-const fixturePath = "testdata/pricelist.json"
+// The fixtures are real records from both live feeds, trimmed to a few each:
+// a foil single, a non-foil variation, a single whose scryfall_id is null, and
+// sealed product that ships internationally and one that does not.
+const (
+	singlesFixture = "testdata/pricelist.json"
+	sealedFixture  = "testdata/sealed_pricelist.json"
+)
 
-// assertFixtureProducts verifies that products decoded from testdata match the
-// expected values, exercising the ",string" JSON tags in particular.
-func assertFixtureProducts(t *testing.T, products []Product) {
+var wantSingles = []Product{
+	{
+		ID:          46329,
+		SKU:         "FINV-044",
+		ScryfallID:  "57e45de5-0e8b-41d3-979b-ec5a29cac682",
+		URL:         "mtg/invasion/wayfaring-giant-foil",
+		Name:        "Wayfaring Giant",
+		Edition:     "Invasion",
+		IsFoil:      true,
+		PriceRetail: 1.49,
+		QtyRetail:   6,
+		PriceBuy:    0.45,
+		QtyBuying:   10,
+		ConditionValues: ConditionValue{
+			NMPrice: 1.49, NMQty: 1,
+			EXPrice: 1.19, EXQty: 3,
+			VGPrice: 0.89, VGQty: 1,
+			GPrice: 0.60, GQty: 1,
+		},
+	},
+	{
+		ID:          14043,
+		SKU:         "ATQ-080C",
+		ScryfallID:  "a696c5b6-f216-454d-8029-74e84bbd1428",
+		URL:         "mtg/antiquities/mishras-factory-autumn",
+		Name:        "Mishra's Factory",
+		Variation:   "Autumn",
+		Edition:     "Antiquities",
+		PriceRetail: 249.99,
+		QtyRetail:   2,
+		PriceBuy:    165.00,
+		QtyBuying:   15,
+		ConditionValues: ConditionValue{
+			NMPrice: 249.99, EXPrice: 224.99, EXQty: 2,
+			VGPrice: 199.99, GPrice: 174.99,
+		},
+	},
+	{
+		ID:          333921,
+		SKU:         "FRA-0001P",
+		URL:         "mtg/promo-pack/emrakul-the-exigent-doom-promo-pack",
+		Name:        "Emrakul, the Exigent Doom",
+		Variation:   "Promo Pack",
+		Edition:     "Promo Pack",
+		PriceRetail: 34.99,
+		PriceBuy:    22.00,
+		QtyBuying:   5,
+		ConditionValues: ConditionValue{
+			NMPrice: 34.99, EXPrice: 29.74, VGPrice: 26.24, GPrice: 22.74,
+		},
+	},
+}
+
+var wantSealed = []Product{
+	{
+		ID:                   1132,
+		URL:                  "mtg-sealed/mercadian-masques-booster-box",
+		Name:                 "Mercadian Masques Booster Box",
+		Edition:              "Mercadian Masques",
+		PriceRetail:          2699.99,
+		QtyRetail:            1,
+		PriceBuy:             1755.00,
+		QtyBuying:            1,
+		ShipsInternationally: true,
+	},
+	{
+		ID:          230638,
+		URL:         "mtg-sealed/secret-lair-drop-bitterblossom-dreams",
+		Name:        "Secret Lair Drop - Bitterblossom Dreams",
+		Edition:     "Secret Lair",
+		PriceRetail: 74.99,
+		PriceBuy:    33.00,
+		QtyBuying:   9,
+	},
+}
+
+func assertProducts(t *testing.T, got, want []Product) {
 	t.Helper()
-
-	if len(products) != 2 {
-		t.Fatalf("got %d products, want 2", len(products))
+	if len(got) != len(want) {
+		t.Fatalf("got %d products, want %d", len(got), len(want))
 	}
-
-	lotus := products[0]
-	if lotus.ID != 1234 {
-		t.Errorf("ID = %d, want 1234", lotus.ID)
-	}
-	if lotus.Name != "Black Lotus" {
-		t.Errorf("Name = %q, want %q", lotus.Name, "Black Lotus")
-	}
-	if !lotus.IsFoil {
-		t.Error("IsFoil = false, want true (parsed from string)")
-	}
-	if lotus.PriceRetail != 12345.67 {
-		t.Errorf("PriceRetail = %v, want 12345.67", lotus.PriceRetail)
-	}
-	if lotus.PriceBuy != 9000.00 {
-		t.Errorf("PriceBuy = %v, want 9000.00", lotus.PriceBuy)
-	}
-	if lotus.QtyRetail != 2 {
-		t.Errorf("QtyRetail = %d, want 2", lotus.QtyRetail)
-	}
-	if lotus.ConditionValues.EXPrice != 8000.50 {
-		t.Errorf("EXPrice = %v, want 8000.50", lotus.ConditionValues.EXPrice)
-	}
-	if lotus.ConditionValues.GQty != 2 {
-		t.Errorf("GQty = %d, want 2", lotus.ConditionValues.GQty)
-	}
-	if lotus.ShipsInternationally {
-		t.Error("ShipsInternationally = true, want false (absent from singles)")
-	}
-
-	box := products[1]
-	if box.IsFoil {
-		t.Error("IsFoil = true, want false (parsed from string)")
-	}
-	if box.PriceBuy != 0 {
-		t.Errorf("PriceBuy = %v, want 0", box.PriceBuy)
-	}
-	if box.ScryfallID != "" {
-		t.Errorf("ScryfallID = %q, want empty", box.ScryfallID)
-	}
-	if !box.ShipsInternationally {
-		t.Error("ShipsInternationally = false, want true (parsed from bool)")
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("product %d:\n got  %+v\n want %+v", i, got[i], want[i])
+		}
 	}
 }
 
 func TestPricelistFromFile(t *testing.T) {
-	products, meta, err := Pricelist(context.Background(), nil, fixturePath)
+	products, meta, err := Pricelist(context.Background(), nil, singlesFixture)
 	if err != nil {
 		t.Fatalf("Pricelist: %v", err)
 	}
 
-	assertFixtureProducts(t, products)
+	assertProducts(t, products, wantSingles)
 
 	if meta.BaseURL != "https://www.cardkingdom.com/" {
 		t.Errorf("BaseURL = %q, want %q", meta.BaseURL, "https://www.cardkingdom.com/")
@@ -84,7 +125,7 @@ func TestPricelistFromFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreatedAtTime: %v", err)
 	}
-	want := time.Date(2025, 9, 21, 14, 30, 0, 0, time.UTC)
+	want := time.Date(2026, 10, 1, 4, 4, 53, 0, time.UTC)
 	if !got.Equal(want) {
 		t.Errorf("CreatedAtTime = %v, want %v", got, want)
 	}
@@ -108,14 +149,14 @@ func TestPricelistFileContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel before the read is attempted
 
-	_, _, err := Pricelist(ctx, nil, fixturePath)
+	_, _, err := Pricelist(ctx, nil, singlesFixture)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("Pricelist error = %v, want context.Canceled", err)
 	}
 }
 
 func TestPricelistHTTP(t *testing.T) {
-	body, err := os.ReadFile(fixturePath)
+	body, err := os.ReadFile(singlesFixture)
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)
 	}
@@ -131,7 +172,7 @@ func TestPricelistHTTP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Pricelist: %v", err)
 	}
-	assertFixtureProducts(t, products)
+	assertProducts(t, products, wantSingles)
 
 	if gotUA != UserAgent {
 		t.Errorf("User-Agent = %q, want %q", gotUA, UserAgent)
@@ -187,7 +228,7 @@ func TestPricelistContextCancelled(t *testing.T) {
 	}
 }
 
-// fixtureTransport serves the testdata fixture for any request, recording the
+// fixtureTransport serves one testdata fixture for any request, recording the
 // URL it was asked for. This lets us exercise SinglesPricelist / SealedPricelist,
 // which target hardcoded live endpoints, without any network access.
 type fixtureTransport struct {
@@ -206,20 +247,21 @@ func (ft *fixtureTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 func TestSinglesAndSealedURLs(t *testing.T) {
-	body, err := os.ReadFile(fixturePath)
-	if err != nil {
-		t.Fatalf("read fixture: %v", err)
-	}
-
 	for _, tc := range []struct {
 		name    string
 		call    func(ctx context.Context, c *http.Client) ([]Product, error)
+		fixture string
+		want    []Product
 		wantURL string
 	}{
-		{"singles", SinglesPricelist, PricelistURL},
-		{"sealed", SealedPricelist, SealedListURL},
+		{"singles", SinglesPricelist, singlesFixture, wantSingles, PricelistURL},
+		{"sealed", SealedPricelist, sealedFixture, wantSealed, SealedListURL},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			body, err := os.ReadFile(tc.fixture)
+			if err != nil {
+				t.Fatalf("read fixture: %v", err)
+			}
 			ft := &fixtureTransport{body: body}
 			client := &http.Client{Transport: ft}
 
@@ -227,7 +269,7 @@ func TestSinglesAndSealedURLs(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s: %v", tc.name, err)
 			}
-			assertFixtureProducts(t, products)
+			assertProducts(t, products, tc.want)
 
 			if ft.lastURL != tc.wantURL {
 				t.Errorf("requested URL = %q, want %q", ft.lastURL, tc.wantURL)
