@@ -224,14 +224,15 @@ ground truth for how these fields are actually used:
 
 ## Testing
 
-`testdata/pricelist.json` is a two-record fixture used by
-`cardkingdom_test.go` for both the singles and sealed code paths (via a
-fake `http.RoundTripper` that serves the same body regardless of which URL
-is requested). Its second record ("Booster Box") now carries
-`ships_internationally: true` and both feed-shape assertions
-(`ShipsInternationally` false-on-singles / true-on-sealed) are checked, but
-it still also carries singles-only fields (`sku`, `scryfall_id`,
-`variation`, `is_foil`, `condition_values`, all as zero/empty values) that a
-real sealed record never sends — see `todo/001` for making the fixture's
-sealed record match the real disjoint shape exactly, rather than only
-approximating it.
+The fixtures are real records copied unchanged from both live feeds
+(2026-10-01), so they carry exactly the keys each endpoint sends:
+
+- `testdata/pricelist.json` (singles): a foil card with stock in every
+  condition, a non-foil `Variation`, and a `Promo Pack` card whose
+  `scryfall_id` is `null`.
+- `testdata/sealed_pricelist.json` (sealed): one product that ships
+  internationally and one that does not; none of the singles-only keys.
+
+`cardkingdom_test.go` compares every decoded `Product` field for field. The
+`SinglesPricelist`/`SealedPricelist` tests serve each endpoint its own
+fixture through a fake `http.RoundTripper`.
