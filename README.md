@@ -116,7 +116,7 @@ This package uses the `json:",string"` tag to parse those into `float64`/`bool` 
 
 ## Context & cancellation
 
-HTTP functions accept a `context.Context`. Pass deadlines or cancel to abort in-flight HTTP requests:
+Every function accepts a `context.Context`. Pass deadlines or cancel to abort in-flight HTTP requests; a local file is only checked against the context before it is opened:
 
 ```go
 ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -146,7 +146,7 @@ by which endpoint you fetched it from.
 this does not establish the feed's source timezone. If you know the source
 location, use `time.ParseInLocation` on `CreatedAt` instead.
 
-Prices use `float64` to mirror the existing API. Binary floating-point values
+Prices use `float64`. Binary floating-point values
 are approximate; callers needing exact monetary arithmetic should convert at
 their application boundary with an explicit rounding policy.
 
