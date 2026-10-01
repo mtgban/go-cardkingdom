@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/mtgban/go-cardkingdom"
@@ -30,8 +31,10 @@ func ExampleSealedPricelist() {
 	fmt.Printf("found %d sealed products\n", len(sealed))
 }
 
-func ExampleDecodePricelist() {
-	body := `{
+func ExampleLoadPricelistFile() {
+	// A local snapshot of the sealed feed; a URL works the same way.
+	snapshot := filepath.Join(os.TempDir(), "cardkingdom-sealed-example.json")
+	err := os.WriteFile(snapshot, []byte(`{
 		"meta": {"created_at": "2026-10-01 04:05:00", "base_url": "https://www.cardkingdom.com/"},
 		"data": [{
 			"id": 1132,
@@ -44,22 +47,27 @@ func ExampleDecodePricelist() {
 			"price_buy": "1755.00",
 			"qty_buying": 1
 		}]
-	}`
-	products, meta, err := cardkingdom.DecodePricelist(strings.NewReader(body))
+	}`), 0o600)
 	if err != nil {
 		panic(err)
 	}
-	created, err := meta.CreatedAtTime()
+	defer os.Remove(snapshot)
+
+	file, err := cardkingdom.LoadPricelistFile(context.Background(), nil, snapshot)
 	if err != nil {
 		panic(err)
 	}
-	for _, p := range products {
-		fmt.Printf("%s: $%.2f retail, $%.2f buylist\n", p.Name, p.PriceRetail, p.PriceBuy)
-		fmt.Println(meta.BaseURL + p.URL)
+	created, err := file.Meta.CreatedAtTime()
+	if err != nil {
+		panic(err)
 	}
 	fmt.Println(created.Format(time.RFC3339))
+	for _, p := range file.Data {
+		fmt.Printf("%s: $%.2f retail, $%.2f buylist\n", p.Name, p.PriceRetail, p.PriceBuy)
+		fmt.Println(file.Meta.BaseURL + p.URL)
+	}
 	// Output:
+	// 2026-10-01T04:05:00Z
 	// Mercadian Masques Booster Box: $2699.99 retail, $1755.00 buylist
 	// https://www.cardkingdom.com/mtg-sealed/mercadian-masques-booster-box
-	// 2026-10-01T04:05:00Z
 }

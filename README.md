@@ -52,13 +52,32 @@ with your chosen timeout.
 For testing or offline runs, you can point `Pricelist` at a local JSON file path:
 
 ```go
-prods, metadata, err := cardkingdom.Pricelist(ctx, nil, "pricelist.json")
+prods, err := cardkingdom.Pricelist(ctx, nil, "pricelist.json")
 ```
 
 If the `link` argument doesn’t start with `http://` or `https://`, the function opens it as a file.
 
-It's possible to parse the metadata CreatedAt field as a time.Time with the
-`CreatedAtTime()` method.
+## When the list was built
+
+`SinglesPricelistFile`, `SealedPricelistFile` and `LoadPricelistFile` return
+the whole `PricelistFile` as Card Kingdom sends it: `Meta` (when the list was
+built, and the base URL product links are relative to) and `Data` (the
+products). Use it to refuse a list that has stopped updating; how old is too
+old is up to you.
+
+```go
+file, err := cardkingdom.SinglesPricelistFile(ctx, nil)
+if err != nil {
+	return err
+}
+created, err := file.Meta.CreatedAtTime()
+if err != nil {
+	return err
+}
+if time.Since(created) > 48*time.Hour {
+	return fmt.Errorf("card kingdom list is from %s", created)
+}
+```
 
 ## Data model
 
@@ -123,24 +142,13 @@ while `ShipsInternationally` is sealed-only (always `false` on singles).
 Nothing in the feed itself flags which shape a record is — that's implied
 by which endpoint you fetched it from.
 
-`CreatedAt` contains no timezone. `CreatedAtTime()` interprets it as UTC for
-compatibility; this does not establish the feed's source timezone. If you know
-the source location, use `time.ParseInLocation` on `CreatedAt` instead.
+`CreatedAt` contains no timezone. `CreatedAtTime()` interprets it as UTC;
+this does not establish the feed's source timezone. If you know the source
+location, use `time.ParseInLocation` on `CreatedAt` instead.
 
 Prices use `float64` to mirror the existing API. Binary floating-point values
 are approximate; callers needing exact monetary arithmetic should convert at
 their application boundary with an explicit rounding policy.
-
-## Explicit sources
-
-Use `PricelistFromURL(ctx, client, url)` for HTTP(S),
-`PricelistFromFile(path)` for files, or `DecodePricelist(reader)` for an
-existing reader. Each returns products, metadata, and an error. The decoder
-does not close the reader; `PricelistFromFile` itself does not support
-cancellation once the read has started. `Pricelist` remains available with
-its original URL-prefix dispatch behavior, and checks `ctx` before starting
-a local-file read (so an already-cancelled or expired context is honored
-up front, even though the read itself can't be interrupted mid-flight).
 
 ## License
 

@@ -2,12 +2,14 @@
 //
 // It supports fetching both singles and sealed-product price lists, decoding
 // them into typed Go structs. Requests are made over HTTP using a standard
-// [net/http.Client], and HTTP functions accept a [context.Context] for
+// [net/http.Client], and every function accepts a [context.Context] for
 // cancellation and deadline control.
 //
-// The two main entry points are [SinglesPricelist] and [SealedPricelist].
-// For lower-level access — including reading from a local file — use [Pricelist]
-// directly.
+// [SinglesPricelist], [SealedPricelist] and [Pricelist] return the products.
+// Their counterparts [SinglesPricelistFile], [SealedPricelistFile] and
+// [LoadPricelistFile] return the whole [PricelistFile], with the time Card
+// Kingdom built it. [Pricelist] and [LoadPricelistFile] also read a local
+// file.
 package cardkingdom
 
 import (
@@ -39,29 +41,28 @@ const (
 	DefaultTimeout = 30 * time.Second
 )
 
-// Response is the top-level envelope returned by the Card Kingdom API.
-// Most callers should use [SinglesPricelist], [SealedPricelist], or [Pricelist]
-// instead of working with Response directly.
-type Response struct {
+// PricelistFile is a published price list as Card Kingdom sends it: its
+// metadata and its products.
+type PricelistFile struct {
 	Meta Metadata  `json:"meta"`
 	Data []Product `json:"data"`
 }
 
-// Metadata contains header information returned alongside the price list.
+// Metadata is the header Card Kingdom sends alongside the products.
 type Metadata struct {
-	// CreatedAt is the timestamp at which the price list was generated,
-	// formatted as "2006-01-02 15:04:05". Use [Metadata.CreatedAtTime] to
-	// parse it into a [time.Time].
+	// CreatedAt is when Card Kingdom built the list, formatted as
+	// "2006-01-02 15:04:05" with no timezone. Use [Metadata.CreatedAtTime]
+	// to parse it into a [time.Time].
 	CreatedAt string `json:"created_at"`
 
-	// BaseURL is the base URL used to construct product page links.
+	// BaseURL is the base that each [Product.URL] is relative to.
 	BaseURL string `json:"base_url"`
 }
 
 // CreatedAtTime parses the CreatedAt field into a [time.Time].
 // The expected layout is "2006-01-02 15:04:05". An error is returned if the
 // value does not match that format. The timezone-free value is interpreted
-// as UTC for compatibility; the feed does not identify its source timezone.
+// as UTC; the feed does not identify its source timezone.
 func (m Metadata) CreatedAtTime() (time.Time, error) {
 	return time.Parse("2006-01-02 15:04:05", m.CreatedAt)
 }
@@ -80,7 +81,7 @@ type Product struct {
 	// for the singles the feed sends with a null scryfall_id.
 	ScryfallID string `json:"scryfall_id"`
 
-	// URL is a product path relative to Metadata.BaseURL.
+	// URL is a product path relative to [Metadata.BaseURL].
 	URL string `json:"url"`
 
 	// Name is the card or product name.
@@ -143,23 +144,28 @@ type ConditionValue struct {
 }
 
 // SinglesPricelist fetches the current singles price list from Card Kingdom.
-//
-// It is a convenience wrapper around [PricelistFromURL] that discards the
-// [Metadata].
-// Passing nil for client will use a default clean HTTP client.
+// Passing nil for client uses a default clean HTTP client; see [Pricelist].
 func SinglesPricelist(ctx context.Context, client *http.Client) ([]Product, error) {
-	products, _, err := PricelistFromURL(ctx, client, PricelistURL)
-	return products, err
+	return Pricelist(ctx, client, PricelistURL)
 }
 
-// SealedPricelist fetches the current sealed-product price list from Card Kingdom.
-//
-// It is a convenience wrapper around [PricelistFromURL] that discards the
-// [Metadata].
-// Passing nil for client will use a default clean HTTP client.
+// SealedPricelist fetches the current sealed-product price list from Card
+// Kingdom. Passing nil for client uses a default clean HTTP client; see
+// [Pricelist].
 func SealedPricelist(ctx context.Context, client *http.Client) ([]Product, error) {
-	products, _, err := PricelistFromURL(ctx, client, SealedListURL)
-	return products, err
+	return Pricelist(ctx, client, SealedListURL)
+}
+
+// SinglesPricelistFile is [SinglesPricelist] with the time Card Kingdom
+// built the list; see [LoadPricelistFile].
+func SinglesPricelistFile(ctx context.Context, client *http.Client) (*PricelistFile, error) {
+	return LoadPricelistFile(ctx, client, PricelistURL)
+}
+
+// SealedPricelistFile is [SealedPricelist] with the time Card Kingdom built
+// the list; see [LoadPricelistFile].
+func SealedPricelistFile(ctx context.Context, client *http.Client) (*PricelistFile, error) {
+	return LoadPricelistFile(ctx, client, SealedListURL)
 }
 
 // Pricelist fetches and decodes a Card Kingdom price list from the given link.
@@ -169,74 +175,68 @@ func SealedPricelist(ctx context.Context, client *http.Client) ([]Product, error
 // HTTP client from [github.com/hashicorp/go-cleanhttp] with a [DefaultTimeout]
 // request timeout. Otherwise link is treated as a local file path, which is
 // useful for testing or processing cached snapshots. In that case ctx is
-// only checked before the read starts — [PricelistFromFile], which handles
-// the read itself, does not observe ctx once opened.
+// only checked before the read starts; the read itself cannot be cancelled.
 //
 // On a non-200 response, the error includes the status and up to 4 KB of the
 // response body. JSON decode errors are wrapped with the source link for
 // easier diagnosis.
-func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product, Metadata, error) {
-	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
-		return PricelistFromURL(ctx, client, link)
+func Pricelist(ctx context.Context, client *http.Client, link string) ([]Product, error) {
+	file, err := load(ctx, client, link)
+	if err != nil {
+		return nil, err
 	}
-	if err := ctx.Err(); err != nil {
-		return nil, Metadata{}, err
-	}
-	return PricelistFromFile(link)
+	return file.Data, nil
 }
 
-// PricelistFromURL fetches an HTTP or HTTPS price list. A nil client uses
-// DefaultTimeout. The context controls the request, including body reads.
-func PricelistFromURL(ctx context.Context, client *http.Client, link string) ([]Product, Metadata, error) {
+// LoadPricelistFile is [Pricelist] returning the whole [PricelistFile], with
+// the [Metadata] that says when Card Kingdom built the list, so a caller can
+// refuse one that has stopped updating. How old is too old is the caller's to
+// say.
+func LoadPricelistFile(ctx context.Context, client *http.Client, link string) (*PricelistFile, error) {
+	return load(ctx, client, link)
+}
+
+func load(ctx context.Context, client *http.Client, link string) (*PricelistFile, error) {
+	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
+		return fetch(ctx, client, link)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	file, err := os.Open(link)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	return decode(file, link)
+}
+
+func fetch(ctx context.Context, client *http.Client, link string) (*PricelistFile, error) {
 	if client == nil {
 		client = cleanhttp.DefaultClient()
 		client.Timeout = DefaultTimeout
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, http.NoBody)
 	if err != nil {
-		return nil, Metadata{}, err
-	}
-	if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
-		return nil, Metadata{}, fmt.Errorf("unsupported price list URL %q", link)
+		return nil, err
 	}
 	req.Header.Set("User-Agent", UserAgent)
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, Metadata{}, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		ret, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
-		return nil, Metadata{}, fmt.Errorf("GET %q: %s: %s", link, resp.Status, string(ret))
+		return nil, fmt.Errorf("GET %q: %s: %s", link, resp.Status, string(ret))
 	}
-	return decodeSource(resp.Body, link)
+	return decode(resp.Body, link)
 }
 
-// PricelistFromFile reads a local JSON file regardless of its name.
-// It closes the file before returning. Local reads do not support cancellation.
-func PricelistFromFile(path string) ([]Product, Metadata, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, Metadata{}, err
+func decode(reader io.Reader, source string) (*PricelistFile, error) {
+	var file PricelistFile
+	if err := json.NewDecoder(reader).Decode(&file); err != nil {
+		return nil, fmt.Errorf("decode %q: %w", source, err)
 	}
-	defer file.Close()
-	return decodeSource(file, path)
-}
-
-// DecodePricelist decodes one JSON price list from reader without closing it.
-// Cancellation and reader lifetime are controlled by the caller.
-func DecodePricelist(reader io.Reader) ([]Product, Metadata, error) {
-	var response Response
-	if err := json.NewDecoder(reader).Decode(&response); err != nil {
-		return nil, Metadata{}, err
-	}
-	return response.Data, response.Meta, nil
-}
-
-func decodeSource(reader io.Reader, source string) ([]Product, Metadata, error) {
-	products, metadata, err := DecodePricelist(reader)
-	if err != nil {
-		return nil, Metadata{}, fmt.Errorf("decode %q: %w", source, err)
-	}
-	return products, metadata, nil
+	return &file, nil
 }

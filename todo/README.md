@@ -21,9 +21,6 @@ restated version of the same argument.
 - **Decode `ships_internationally` on the sealed feed** — done: `Product`
   now has `ShipsInternationally`.
 - **`Pricelist`'s file-path branch ignoring `ctx`** — done: `Pricelist`
-  checks `ctx.Err()` before delegating to `PricelistFromFile` (which itself
-  still doesn't support cancellation mid-read — a deliberate, documented
-  choice, not a gap; see `SPECIFICATIONS.md`).
-- **Review/merge decision on the explicit source APIs** — done: `PR #3`
-  merged, adding `PricelistFromURL`/`PricelistFromFile`/`DecodePricelist`.
-  See `SPECIFICATIONS.md`'s API surface section.
+  checks `ctx.Err()` before opening a local file (the read itself still
+  can't be cancelled — a deliberate, documented choice; see
+  `SPECIFICATIONS.md`).
