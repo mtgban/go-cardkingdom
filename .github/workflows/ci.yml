@@ -12,9 +12,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
@@ -33,14 +33,14 @@ jobs:
 
       - name: Lint
         run: |
-          go run github.com/mgechev/revive@v1.13.0 \
+          go run github.com/mgechev/revive@v1.17.0 \
             -set_exit_status -config .revive.toml ./...
 
       # revive reads the syntax tree; staticcheck follows the values through
       # it. Pinned, since a new release finding new things would fail a build
       # that changed nothing.
       - name: Staticcheck
-        run: go run honnef.co/go/tools/cmd/staticcheck@2025.1.1 ./...
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
 
       - name: Build
         run: go build ./...
