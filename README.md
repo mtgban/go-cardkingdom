@@ -19,19 +19,18 @@ go get github.com/mtgban/go-cardkingdom
 package main
 
 import (
-    "context"
-    "fmt"
-    ck "github.com/mtgban/go-cardkingdom"
+	"context"
+	"fmt"
+
+	"github.com/mtgban/go-cardkingdom"
 )
 
 func main() {
-    ctx := context.Background()
-
-    singles, err := ck.SinglesPricelist(ctx, nil)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Printf("found %d products\n", len(singles))
+	singles, err := cardkingdom.SinglesPricelist(context.Background(), nil)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("found %d products\n", len(singles))
 }
 ```
 
@@ -40,7 +39,7 @@ func main() {
 You can inject any `*http.Client`:
 
 ```go
-client := &http.Client{ Timeout: 10 * time.Second }
+client := &http.Client{Timeout: 10 * time.Second}
 items, err := cardkingdom.SinglesPricelist(ctx, client)
 ```
 
@@ -111,11 +110,6 @@ prods, err := cardkingdom.SinglesPricelist(ctx, nil)
 - Non-200 responses include a short body preview to help troubleshooting.
 - JSON decoding errors are wrapped with the endpoint/file path that failed.
 
-## License
-
-MIT
-
-
 ## Data semantics
 
 `Product.URL` is relative to `Metadata.BaseURL` (for example,
@@ -147,3 +141,7 @@ cancellation once the read has started. `Pricelist` remains available with
 its original URL-prefix dispatch behavior, and checks `ctx` before starting
 a local-file read (so an already-cancelled or expired context is honored
 up front, even though the read itself can't be interrupted mid-flight).
+
+## License
+
+MIT
