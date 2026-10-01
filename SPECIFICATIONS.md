@@ -142,13 +142,7 @@ about which representation it uses per field.
 
 ## Versioning history
 
-| Tag | Notes |
-|---|---|
-| `v0.0.1` | **Retracted** — contains a compilation error. |
-| `v0.0.2` | — |
-| `v0.0.3` | Hardening pass: default HTTP client timeout, explicit `http://`/`https://` scheme check (was a bare `"http"` prefix), test suite added, CI added, `%q`-quoted error strings, `v0.0.1` retraction added. |
-| `v0.1.0` | **Breaking**: exported field initialisms cased per the Go style guide (`Sku`→`SKU`, `Nm`/`Ex`/`Vg`→`NM`/`EX`/`VG`). |
-| (unreleased, on `master`) | `PR #4`: corrected `ConditionValue`/`URL` doc comments from buylist to retail semantics, documented the `CreatedAt` timezone assumption. `PR #3`: added explicit `PricelistFromURL`/`PricelistFromFile`/`DecodePricelist` alongside the prefix-sniffing `Pricelist` (see API surface, below). `PR #5`: added `Product.ShipsInternationally`; `Pricelist` now checks `ctx.Err()` before a local-file read. |
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## API surface
 

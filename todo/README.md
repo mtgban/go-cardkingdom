@@ -13,7 +13,6 @@ restated version of the same argument.
 | [002](002-condition-type-revisit.md) | Typed per-condition accessor | **Closed without merging (PR #2)** — revisit only with new evidence |
 | [003](003-domain-id-types-not-recommended.md) | `ProductID`/`SKU` domain types | **Closed without merging (PR #1)** — not recommended |
 | [004](004-money-representation-float64.md) | `float64` for currency | Documented limitation, no action recommended |
-| [005](005-changelog-and-github-releases.md) | No `CHANGELOG.md` / no GitHub Releases | Not started — low effort |
 
 ## Resolved (removed from this list)
 
@@ -26,3 +25,6 @@ restated version of the same argument.
 - **Review/merge decision on the explicit source APIs** — done: `PR #3`
   merged, adding `PricelistFromURL`/`PricelistFromFile`/`DecodePricelist`.
   See `SPECIFICATIONS.md`'s API surface section.
+- **`CHANGELOG.md` and GitHub Releases** (`005`) — done: `CHANGELOG.md`
+  covers every tag, and `AGENTS.md`'s Versioning section says to publish a
+  Release from it with each new tag.

@@ -85,6 +85,10 @@ in use:
   in `go.mod`, with a one-line comment explaining why (see `v0.0.1`), and
   the retraction only takes effect once a *newer* tag carrying it is pushed.
 - Tag after the commit is on `master` and pushed, never before.
+- Add every user-visible change to `CHANGELOG.md`'s `Unreleased` section in
+  the PR that makes it. When tagging, move that section under the new
+  version and publish a GitHub Release with the same text
+  (`gh release create vX.Y.Z --notes-file …`).
 
 ## Git / PR workflow
 
