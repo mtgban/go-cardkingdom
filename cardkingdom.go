@@ -76,7 +76,8 @@ type Product struct {
 	SKU string `json:"sku"`
 
 	// ScryfallID is the Scryfall UUID for this card, suitable for
-	// cross-referencing with the Scryfall API. Empty for sealed products.
+	// cross-referencing with the Scryfall API. Empty for sealed products, and
+	// for the singles the feed sends with a null scryfall_id.
 	ScryfallID string `json:"scryfall_id"`
 
 	// URL is a product path relative to Metadata.BaseURL.

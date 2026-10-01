@@ -8,16 +8,17 @@ this is the source of truth for what the vendor actually sends.
 
 ## Endpoints
 
-| Constant | URL | Content | Records observed (2026-09-14) |
+| Constant | URL | Content | Records observed (2026-10-01) |
 |---|---|---|---|
-| `PricelistURL` | `https://api.cardkingdom.com/api/v2/pricelist` | Singles (individual cards) | 151,082 |
-| `SealedListURL` | `https://api.cardkingdom.com/api/sealed_pricelist` | Sealed product | 2,129 |
+| `PricelistURL` | `https://api.cardkingdom.com/api/v2/pricelist` | Singles (individual cards) | 152,175 |
+| `SealedListURL` | `https://api.cardkingdom.com/api/sealed_pricelist` | Sealed product | 2,128 |
 
 Both return the same envelope shape (`Response`: `meta` + `data`), decoded
 by the same `Product` struct for every record — but the two endpoints send
 **structurally disjoint** sets of fields per record. This was confirmed by
-fetching every record from both live endpoints on 2026-09-14 and computing
-the exhaustive union of JSON keys present, not a sample.
+fetching every record from both live endpoints on 2026-10-01 and computing
+the exhaustive union of JSON keys present, at every level, not a sample.
+`Product` decodes every key either feed sends.
 
 ### Field presence by endpoint
 
@@ -25,7 +26,7 @@ the exhaustive union of JSON keys present, not a sample.
 |---|---|---|---|
 | `id` | always | always | yes (`ID`) |
 | `sku` | always | **never** | yes (`SKU`) |
-| `scryfall_id` | always (empty string on some rows) | **never** | yes (`ScryfallID`) |
+| `scryfall_id` | always (`null` on some rows) | **never** | yes (`ScryfallID`) |
 | `url` | always | always | yes (`URL`) |
 | `name` | always | always | yes (`Name`) |
 | `variation` | always (often `""`) | **never** | yes (`Variation`) |
@@ -40,9 +41,7 @@ the exhaustive union of JSON keys present, not a sample.
 
 Practical consequence: decoding a sealed record into `Product` silently
 zero-values `SKU`, `ScryfallID`, `Variation`, `IsFoil`, and
-`ConditionValues` — this is not an error, and `ScryfallID` being empty for
-sealed product was already documented, but the other four fields going
-empty for every sealed record was not, until this was written up.
+`ConditionValues` on every sealed record — this is not an error.
 `ShipsInternationally` (`ships_internationally`) is a native JSON boolean
 (`true`/`false`), not a `json:",string"` field like `IsFoil` — the vendor is
 not consistent about which representation it uses per field.
@@ -85,8 +84,11 @@ for which.
   set code as a prefix (e.g. `"4ED-117"`), with `F`/`E`/`FE` prefixes for
   some foil/etched variants — see the downstream-consumer section, this
   encoding is load-bearing for at least one real consumer.
-- `ScryfallID` (`scryfall_id`, string, singles only, may be `""`): a
-  Scryfall UUID for cross-referencing. Empty even on some singles rows.
+- `ScryfallID` (`scryfall_id`, string, singles only): a Scryfall UUID for
+  cross-referencing. The feed sends JSON `null` rather than `""` when there
+  is none, which decodes to `""` — 281 singles on 2026-10-01, mostly the
+  `"Promo Pack"` edition (222) and Card Kingdom's own tokens (36, `CKT-`
+  SKUs).
 - `URL` (`url`, string): a **path**, not an absolute URL — e.g.
   `"mtg/4th-edition/abomination"` or `"mtg-sealed/mercadian-masques-booster-box"`.
   Join it with `Metadata.BaseURL` to get a usable link; do not use it
