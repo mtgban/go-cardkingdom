@@ -33,10 +33,12 @@ warningCode = 1
 [rule.use-errors-new]
 # A deferred Close on a request body already read and on a file opened only
 # for reading reports nothing a caller could act on, and neither does a Write
-# to the ResponseWriter of a test handler. Naming them keeps a real unhandled
-# error from being lost among the ones that are not.
+# to the ResponseWriter of a test handler, or a print to stdout in a godoc
+# example. Naming them keeps a real unhandled error from being lost among the
+# ones that are not.
 [rule.unhandled-error]
-  arguments = ["io.Closer.Close", "os.File.Close", "net/http.ResponseWriter.Write"]
+  arguments = ["fmt.Print.*", "io.Closer.Close", "os.File.Close",
+               "net/http.ResponseWriter.Write"]
 [rule.unreachable-code]
 [rule.var-declaration]
 [rule.var-naming]
