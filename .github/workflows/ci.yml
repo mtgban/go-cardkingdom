@@ -40,7 +40,7 @@ jobs:
       # it. Pinned, since a new release finding new things would fail a build
       # that changed nothing.
       - name: Staticcheck
-        run: go run honnef.co/go/tools/cmd/staticcheck@2026.2.1 ./...
+        run: go run honnef.co/go/tools/cmd/staticcheck@2026.2.2 ./...
 
       # Not pinned: the verdict follows the vulnerability database.
       - name: Govulncheck
