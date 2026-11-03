@@ -33,7 +33,7 @@ jobs:
 
       - name: Lint
         run: |
-          go run github.com/mgechev/revive@v1.13.0 \
+          go run github.com/mgechev/revive@v1.17.1 \
             -set_exit_status -config .revive.toml ./...
 
       # revive reads the syntax tree; staticcheck follows the values through
