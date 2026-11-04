@@ -100,6 +100,8 @@ for which.
   sends this as the literal JSON strings `"true"`/`"false"`, not a native
   boolean — unlike `ships_internationally` on the sealed feed, which is a
   native boolean. The two feeds are not consistent with each other on this.
+  It marks the printing's finish, not which foil prices apply: see the
+  downstream-consumer section.
 - `PriceRetail` / `QtyRetail` (`price_retail` json-string float64 /
   `qty_retail` int): current sale price and in-stock quantity, both feeds.
 - `PriceBuy` / `QtyBuying` (`price_buy` json-string float64 / `qty_buying`
@@ -166,10 +168,31 @@ actually used:
   scenario a `Condition`-keyed accessor (`todo/002`) would remove the
   indexing risk from, if revisited.
 - Synthesizes a **per-condition buylist price** that the feed does not
-  provide, by scaling `PriceBuy` by the ratio of each condition's retail
-  price to NM retail price: `buyPrice = PriceBuy * retailPrices[i] /
-  retailPrices[0]`. `QtyBuying` (not condition-specific) is applied
-  uniformly to every synthesized grade.
+  provide, from Card Kingdom's published schedule. The share of `PriceBuy`
+  paid at each grade depends on the row below that applies, and the Alpha,
+  Beta, Unlimited and Foils rows win over the price rows at any price. The
+  result rounds half up to the cent. `QtyBuying` (not condition-specific)
+  is applied uniformly to every synthesized grade.
+
+  | Row | Applies to | EX | VG | G |
+  |---|---|---|---|---|
+  | Under $15 | `PriceBuy` | 80% | 70% | 50% |
+  | $15.00 to $24.99 | `PriceBuy` | 85% | 70% | 50% |
+  | $25.00 to $99.99 | `PriceBuy` | 85% | 75% | 65% |
+  | $100.00 and up | `PriceBuy` | 90% | 80% | 70% |
+  | Alpha, Beta, Unlimited | `Edition` is one of these | 80% | 60% | 40% |
+  | Foils | `IsFoil`, and `URL` carries the foil suffix | 75% | 50% | 30% |
+
+  The Foils row covers what Card Kingdom's carts and invoices label
+  `<Edition> Foil`. `Edition` never holds that word, and `IsFoil` also marks
+  all of `Promotional` and `Secret Lair`, and others, which are paid on the
+  price rows. `URL` tells them apart: the labelled foils get `-foil` after the
+  name and variation, so a variation ending in "Foil" shows it twice
+  (`...-surge-foil-foil`, against `...-judge-foil`), and a foil outside the
+  label may have none at all. The retail prices agree: VG sells under 65% of NM
+  on labelled foils, and at 70% or more on the rest. Otherwise the retail ratios
+  are not the buylist's: retail foils step down 80/60/40, and retail's price
+  rows go by the retail price.
 - Parses `SKU` as `"<setCode>-<number>"`, stripping a leading `F`/`E`/`FE`
   for some foil/etched variants before further lookup — `SKU`'s structure
   is load-bearing, not just an opaque identifier, for at least this
