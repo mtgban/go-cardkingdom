@@ -2,7 +2,7 @@ module github.com/mtgban/go-cardkingdom
 
 go 1.26.0
 
-toolchain go1.26.10
+toolchain go1.26.11
 
 require github.com/hashicorp/go-cleanhttp v0.5.2
 
