@@ -1,0 +1,82 @@
+# Org or repo workflow: wake Grok Bot hostile review on PR activity.
+# Secrets (repo or org):
+#   HOSTILE_REVIEW_WEBHOOK_URL  - from the "Hostile review via webhook" routine panel
+#   HOSTILE_REVIEW_WEBHOOK_KEY  - sender key from the same panel
+#
+# Auth: sends both Authorization: Bearer <key> and X-Webhook-Key: <key>
+# so either panel auth shape works.
+
+name: Hostile review wake
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+
+# Curl-only job: no checkout, no forge writes.
+permissions: {}
+
+concurrency:
+  group: hostile-wake-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  wake:
+    # Fork and Dependabot PRs do not receive repo/org secrets; skip wake
+    # rather than fail red.
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: POST webhook
+        env:
+          URL: ${{ secrets.HOSTILE_REVIEW_WEBHOOK_URL }}
+          KEY: ${{ secrets.HOSTILE_REVIEW_WEBHOOK_KEY }}
+          ACTION: ${{ github.event.action }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          TITLE: ${{ github.event.pull_request.title }}
+          HTML_URL: ${{ github.event.pull_request.html_url }}
+          TIP: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          SENDER: ${{ github.event.sender.login }}
+        run: |
+          set -euo pipefail
+          if [ -z "${URL:-}" ] || [ -z "${KEY:-}" ]; then
+            echo "Missing HOSTILE_REVIEW_WEBHOOK_URL or HOSTILE_REVIEW_WEBHOOK_KEY" >&2
+            exit 1
+          fi
+          # Event fields arrive only via env (never Actions expressions inside this script),
+          # so a crafted PR title/ref cannot break out of jq or steal KEY.
+          payload=$(jq -n \
+            --arg action "$ACTION" \
+            --arg owner "$OWNER" \
+            --arg repo "$REPO" \
+            --argjson number "$NUMBER" \
+            --arg title "$TITLE" \
+            --arg html_url "$HTML_URL" \
+            --arg tip "$TIP" \
+            --arg base "$BASE" \
+            --arg head_ref "$HEAD_REF" \
+            --arg sender "$SENDER" \
+            '{source:"github-actions",action:$action,owner:$owner,repo:$repo,number:$number,title:$title,html_url:$html_url,tip:$tip,base:$base,head_ref:$head_ref,sender:$sender}')
+          code=$(curl -sS -o /tmp/wake-body -w "%{http_code}" -X POST "$URL" \
+            -H "Authorization: Bearer $KEY" \
+            -H "X-Webhook-Key: $KEY" \
+            -H "Content-Type: application/json" \
+            -d "$payload")
+          echo "HTTP $code"
+          head -c 500 /tmp/wake-body || true
+          echo
+          case "$code" in
+            2??) ;;
+            *) exit 1 ;;
+          esac
